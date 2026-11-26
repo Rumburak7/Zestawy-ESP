@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zestawy ESP</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#1f3b57">
+<style>
+:root{--tlo:#f3f5f8;--karta:#fff;--tekst:#1d2733;--szary:#6b7785;--linia:#dde3ea;--akcent:#1f6feb;--ciemny:#1f3b57;--ok:#1a7f37;--uwaga:#b26a00}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--tlo);color:var(--tekst);font-size:15px}
+header{background:var(--ciemny);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px;cursor:pointer}
+header .zrodlo{font-size:12px;opacity:.8}
+header .przyciski{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+main{max-width:1150px;margin:0 auto;padding:16px}
+button,.btn{font:inherit;border:1px solid var(--linia);background:#fff;color:var(--tekst);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--akcent)}
+button.glowny{background:var(--akcent);color:#fff;border-color:var(--akcent)}
+button.czerwony{color:#c62828}
+header button{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}
+#pasek{display:none;background:#fff4d6;border-bottom:1px solid #f0d58a;padding:8px 18px;font-size:14px}
+#pasek.widoczny{display:block}
+#komunikat{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50}
+#komunikat.widoczny{opacity:.95}
+.szukaj{width:100%;padding:10px 12px;border:1px solid var(--linia);border-radius:8px;font:inherit;margin-bottom:14px}
+.siatka{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.karta{background:var(--karta);border:1px solid var(--linia);border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+.karta:hover{box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.karta .foto{height:140px;background:#e7ecf2 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:48px}
+.karta .opis{padding:10px 12px}
+.karta h3{margin:0 0 4px;font-size:16px}
+.karta p{margin:0;color:var(--szary);font-size:13px}
+.stan{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;margin-top:6px}
+.stan.sprawdzony{background:#dcf5e3;color:var(--ok)}
+.stan.inny{background:#fff0d4;color:var(--uwaga)}
+.panel{background:var(--karta);border:1px solid var(--linia);border-radius:12px;padding:16px;margin-bottom:14px}
+.panel h2{margin:0 0 10px;font-size:17px}
+.gora{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.gora .zdjecie{max-width:320px;width:100%;border-radius:10px;border:1px solid var(--linia)}
+.gora .info{flex:1;min-width:260px}
+.gora .qrbox{text-align:center;font-size:11px;color:var(--szary);width:150px}
+.gora .qrbox svg{width:150px;height:150px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--linia);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;color:var(--szary);font-weight:600}
+td.gpio{font-family:Consolas,monospace;font-weight:bold;color:var(--akcent);white-space:nowrap}
+.info td:first-child{color:var(--szary);width:110px}
+pre{background:#0f1720;color:#d7e3f0;padding:12px;border-radius:8px;overflow:auto;font-size:13px;white-space:pre-wrap;margin:0}
+.akcje{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.tekst{white-space:pre-wrap;margin:0}
+label{display:block;font-size:13px;color:var(--szary);margin:10px 0 3px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--linia);border-radius:7px;font:inherit;background:#fff}
+textarea{min-height:70px;resize:vertical}
+textarea.kod{font-family:Consolas,monospace;font-size:13px;min-height:110px}
+.dwie{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.edytor-tab td{padding:3px}
+.edytor-tab input{padding:6px 8px}
+.male{font-size:12px;color:var(--szary)}
+.wybor-naklejek label{display:flex;align-items:center;gap:8px;color:var(--tekst);font-size:14px;margin:4px 0}
+.arkusz{display:flex;flex-wrap:wrap;gap:2mm;background:#fff;padding:4mm;border:1px solid var(--linia);border-radius:8px}
+.naklejka{width:calc(var(--w) * 1mm);border:0.2mm dashed #aaa;padding:1mm;text-align:center;background:#fff;color:#000;break-inside:avoid;page-break-inside:avoid}
+.naklejka svg{width:100%;height:auto;display:block}
+.naklejka .n1{font-weight:bold;font-size:calc(var(--w) * 0.085mm);line-height:1.15;margin-top:.5mm;word-break:break-word}
+.naklejka .n2{font-size:calc(var(--w) * 0.065mm);line-height:1.15;color:#333}
+footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
+@media (max-width:700px){.dwie{grid-template-columns:1fr}.gora .qrbox{display:none}header .przyciski .tylko-laptop{display:none}}
+@media print{
+  @page{margin:8mm}
+  body{background:#fff}
+  header,#pasek,footer,.nie-drukuj{display:none!important}
+  main{padding:0;max-width:none}
+  .arkusz{border:0;padding:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 onclick="idz('')">🔌 Zestawy ESP</h1>
+  <span class="zrodlo" id="zrodlo"></span>
+  <div class="przyciski">
+    <button class="tylko-laptop" onclick="otworzPlik()" title="Otwórz plik zestawy.json z OneDrive">📂 Otwórz</button>
+    <button class="tylko-laptop" onclick="zapisz()" title="Zapisz plik zestawy.json (OneDrive)">💾 Zapisz</button>
+    <button class="tylko-laptop" onclick="pobierz()" title="Pobierz plik do wgrania na GitHub">⬇️ Pobierz plik</button>
+    <button class="tylko-laptop" onclick="idz('naklejki')">🏷️ Naklejki</button>
+    <button onclick="idz('ustawienia')">⚙️</button>
+  </div>
+</header>
+<div id="pasek">⚠️ Masz niezapisane zmiany. Kliknij <b>💾 Zapisz</b>, a potem wgraj plik <b>zestawy.json</b> na GitHub.</div>
+<main id="tresc"></main>
+<footer>Zestawy ESP – autor Adam Bryks 2026</footer>
+<div id="komunikat"></div>
+<input type="file" id="plikWejscie" accept=".json,application/json" style="display:none">
+<input type="file" id="zdjecieWejscie" accept="image/*" style="display:none">
+
+<script>
+/*QR-START*/
+// Własny generator kodów QR (tryb bajtowy, poziom korekcji M) - bez bibliotek z internetu
+const QR = (function () {
+  const ECC = {
+    L: [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    M: [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28]
+  };
+  const BLK = {
+    L: [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
+    M: [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49]
+  };
+  const FB = { L: 1, M: 0 };
+
+  function rawModules(v) {
+    let r = (16 * v + 128) * v + 64;
+    if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; }
+    return r;
+  }
+  function dataCodewords(v, e) { return Math.floor(rawModules(v) / 8) - ECC[e][v] * BLK[e][v]; }
+  function gfMul(x, y) {
+    let z = 0;
+    for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; }
+    return z & 0xFF;
+  }
+  function rsDivisor(d) {
+    const r = new Array(d).fill(0); r[d - 1] = 1; let root = 1;
+    for (let i = 0; i < d; i++) {
+      for (let j = 0; j < d; j++) { r[j] = gfMul(r[j], root); if (j + 1 < d) r[j] ^= r[j + 1]; }
+      root = gfMul(root, 2);
+    }
+    return r;
+  }
+  function rsRem(data, div) {
+    const r = div.map(() => 0);
+    for (const b of data) {
+      const f = b ^ r.shift(); r.push(0);
+      for (let i = 0; i < div.length; i++) r[i] ^= gfMul(div[i], f);
+    }
+    return r;
+  }
+  function alignPos(ver, size) {
+    if (ver === 1) return [];
+    const n = Math.floor(ver / 7) + 2;
+    const step = (ver === 32) ? 26 : Math.ceil((ver * 4 + 4) / (n * 2 - 2)) * 2;
+    const r = [6];
+    for (let pos = size - 7; r.length < n; pos -= step) r.splice(1, 0, pos);
+    return r;
+  }
+  const MASKI = [
+    (x, y) => (x + y) % 2 === 0,
+    (x, y) => y % 2 === 0,
+    (x, y) => x % 3 === 0,
+    (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+    (x, y) => x * y % 2 + x * y % 3 === 0,
+    (x, y) => (x * y % 2 + x * y % 3) % 2 === 0,
+    (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0
+  ];
+
+  function encode(text, ecl) {
+    ecl = ecl || 'M';
+    const bytes = Array.from(new TextEncoder().encode(text));
+    let ver, cap;
+    for (ver = 1; ver <= 40; ver++) {
+      cap = dataCodewords(ver, ecl) * 8;
+      if (4 + (ver <= 9 ? 8 : 16) + bytes.length * 8 <= cap) break;
+    }
+    if (ver > 40) throw new Error('Za dużo tekstu na kod QR');
+
+    const bits = [];
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    push(4, 4); push(bytes.length, ver <= 9 ? 8 : 16); bytes.forEach(b => push(b, 8));
+    push(0, Math.min(4, cap - bits.length));
+    push(0, (8 - bits.length % 8) % 8);
+    for (let p = 0xEC; bits.length < cap; p ^= 0xEC ^ 0x11) push(p, 8);
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b); }
+
+    const nb = BLK[ecl][ver], el = ECC[ecl][ver], raw = Math.floor(rawModules(ver) / 8);
+    const nShort = nb - raw % nb, shortLen = Math.floor(raw / nb);
+    const div = rsDivisor(el), blocks = [];
+    for (let i = 0, k = 0; i < nb; i++) {
+      const dat = data.slice(k, k + shortLen - el + (i < nShort ? 0 : 1)); k += dat.length;
+      const ec = rsRem(dat, div);
+      if (i < nShort) dat.push(0);
+      blocks.push(dat.concat(ec));
+    }
+    const all = [];
+    for (let i = 0; i < blocks[0].length; i++)
+      for (let j = 0; j < blocks.length; j++)
+        if (i !== shortLen - el || j >= nShort) all.push(blocks[j][i]);
+
+    const size = ver * 4 + 17, M = [], F = [];
+    for (let y = 0; y < size; y++) { M.push(new Array(size).fill(false)); F.push(new Array(size).fill(false)); }
+    const setF = (x, y, d) => { M[y][x] = d; F[y][x] = true; };
+
+    for (let i = 0; i < size; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+    const finder = (cx, cy) => {
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy;
+        if (x >= 0 && x < size && y >= 0 && y < size) setF(x, y, d !== 2 && d !== 4);
+      }
+    };
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    const al = alignPos(ver, size), n = al.length;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      if ((i === 0 && j === 0) || (i === 0 && j === n - 1) || (i === n - 1 && j === 0)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+        setF(al[i] + dx, al[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+    const drawFormat = (mask) => {
+      const d = (FB[ecl] << 3) | mask; let rem = d;
+      for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+      const b5 = ((d << 10) | rem) ^ 0x5412, b = i => ((b5 >>> i) & 1) !== 0;
+      for (let i = 0; i <= 5; i++) setF(8, i, b(i));
+      setF(8, 7, b(6)); setF(8, 8, b(7)); setF(7, 8, b(8));
+      for (let i = 9; i < 15; i++) setF(14 - i, 8, b(i));
+      for (let i = 0; i < 8; i++) setF(size - 1 - i, 8, b(i));
+      for (let i = 8; i < 15; i++) setF(8, size - 15 + i, b(i));
+      setF(8, size - 8, true);
+    };
+    drawFormat(0);
+    if (ver >= 7) {
+      let rem = ver;
+      for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+      const vb = (ver << 12) | rem;
+      for (let i = 0; i < 18; i++) {
+        const bit = ((vb >>> i) & 1) !== 0, a = size - 11 + i % 3, c = Math.floor(i / 3);
+        setF(a, c, bit); setF(c, a, bit);
+      }
+    }
+    let idx = 0;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+        const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - vert : vert;
+        if (!F[y][x] && idx < all.length * 8) { M[y][x] = ((all[idx >>> 3] >>> (7 - (idx & 7))) & 1) !== 0; idx++; }
+      }
+    }
+    const applyMask = (m) => {
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++)
+        if (!F[y][x] && MASKI[m](x, y)) M[y][x] = !M[y][x];
+    };
+    const penalty = () => {
+      let p = 0, dark = 0;
+      const linia = (get) => {
+        let run = 1;
+        for (let i = 1; i <= size; i++) {
+          if (i < size && get(i) === get(i - 1)) run++;
+          else { if (run >= 5) p += 3 + run - 5; run = 1; }
+        }
+        for (let i = 0; i + 10 < size; i++) {
+          const w = []; for (let k = 0; k < 11; k++) w.push(get(i + k) ? 1 : 0);
+          const s = w.join('');
+          if (s === '10111010000' || s === '00001011101') p += 40;
+        }
+      };
+      for (let y = 0; y < size; y++) linia(i => M[y][i]);
+      for (let x = 0; x < size; x++) linia(i => M[i][x]);
+      for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) {
+        const c = M[y][x];
+        if (c === M[y][x + 1] && c === M[y + 1][x] && c === M[y + 1][x + 1]) p += 3;
+      }
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (M[y][x]) dark++;
+      const total = size * size;
+      p += Math.max(0, Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1) * 10;
+      return p;
+    };
+    let best = 0, bestP = Infinity;
+    for (let m = 0; m < 8; m++) {
+      applyMask(m); drawFormat(m);
+      const p = penalty();
+      if (p < bestP) { bestP = p; best = m; }
+      applyMask(m);
+    }
+    applyMask(best); drawFormat(best);
+    return { size: size, version: ver, modules: M };
+  }
+
+  function svg(text) {
+    const q = encode(text, 'M'), b = 4, s = q.size + 2 * b;
+    let d = '';
+    for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++)
+      if (q.modules[y][x]) d += 'M' + (x + b) + ',' + (y + b) + 'h1v1h-1z';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + s + ' ' + s + '" shape-rendering="crispEdges">' +
+      '<rect width="' + s + '" height="' + s + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  }
+  return { encode: encode, svg: svg };
+})();
+/*QR-END*/
+
+// ================== Dane ==================
+const DOMYSLNY_ADRES = 'https://rumburak7.github.io/Zestawy-ESP/';
+let dane = { ustawienia: { adresStrony: DOMYSLNY_ADRES, srodowisko: '' }, zestawy: [] };
+let zrodlo = '';          // skąd są dane
+let uchwytPliku = null;   // plik w OneDrive (Chrome)
+let zmiany = false;
+let edyt = null;          // kopia zestawu w edytorze
+let edytNowy = false;
+let wybraneNaklejki = null;
+
+const $ = id => document.getElementById(id);
+function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function komunikat(t) { const k = $('komunikat'); k.textContent = t; k.classList.add('widoczny'); clearTimeout(k._t); k._t = setTimeout(() => k.classList.remove('widoczny'), 2500); }
+function ustawZmiany(v) { zmiany = v; $('pasek').classList.toggle('widoczny', v); }
+function pokazZrodlo() { $('zrodlo').textContent = zrodlo ? 'Dane: ' + zrodlo : ''; }
+
+function uzupelnij(d) {
+  d = d || {};
+  d.ustawienia = Object.assign({ adresStrony: DOMYSLNY_ADRES, srodowisko: '' }, d.ustawienia || {});
+  d.zestawy = (d.zestawy || []).map(z => Object.assign(pustyZestaw(), z));
+  return d;
+}
+function pustyZestaw() {
+  return { id: '', nazwa: '', stan: 'do sprawdzenia', plytka: '', ekran: '', sterownik: '', dotyk: '', sd: '', ide: '', piny: [], biblioteki: [], konfiguracja: '', uwagi: '', zdjecie: '' };
+}
+function znajdz(id) { return dane.zestawy.find(z => z.id === id); }
+function adresZestawu(z) {
+  let a = (dane.ustawienia.adresStrony || DOMYSLNY_ADRES).trim();
+  if (!a.endsWith('/')) a += '/';
+  return a + '?z=' + encodeURIComponent(z.id);
+}
+function slug(t) {
+  const mapa = { 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z', 'ä': 'a', 'ö': 'o', 'ü': 'u', 'ß': 'ss' };
+  return String(t).toLowerCase().replace(/[ąćęłńóśźżäöüß]/g, c => mapa[c]).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
+}
+
+// ================== Pliki (OneDrive / GitHub) ==================
+async function wczytajZGithuba() {
+  try {
+    const r = await fetch('zestawy.json?t=' + Date.now());
+    if (!r.ok) throw new Error(r.status);
+    dane = uzupelnij(await r.json());
+    zrodlo = 'GitHub';
+  } catch (e) { zrodlo = ''; }
+}
+
+async function otworzPlik() {
+  if (zmiany && !confirm('Masz niezapisane zmiany. Otworzyć inny plik i je stracić?')) return;
+  if (window.showOpenFilePicker) {
+    try {
+      const [h] = await showOpenFilePicker({ id: 'zestawyesp', types: [{ description: 'Zestawy ESP (JSON)', accept: { 'application/json': ['.json'] } }] });
+      const f = await h.getFile();
+      dane = uzupelnij(JSON.parse(await f.text()));
+      uchwytPliku = h; zrodlo = 'plik ' + f.name + ' (z komputera)';
+      ustawZmiany(false); pokazZrodlo(); render(); komunikat('Wczytano ' + f.name);
+    } catch (e) { if (e.name !== 'AbortError') alert('Nie udało się otworzyć pliku: ' + e.message); }
+    return;
+  }
+  $('plikWejscie').click();
+}
+$('plikWejscie').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { dane = uzupelnij(JSON.parse(await f.text())); zrodlo = 'plik ' + f.name; ustawZmiany(false); pokazZrodlo(); render(); }
+  catch (err) { alert('To nie jest dobry plik zestawy.json'); }
+  e.target.value = '';
+});
+
+function tekstPliku() { return JSON.stringify(dane, null, 1); }
+
+async function zapisz() {
+  if (window.showSaveFilePicker) {
+    try {
+      if (!uchwytPliku) {
+        uchwytPliku = await showSaveFilePicker({ id: 'zestawyesp', suggestedName: 'zestawy.json', types: [{ description: 'Zestawy ESP (JSON)', accept: { 'application/json': ['.json'] } }] });
+      }
+      if (uchwytPliku.queryPermission && (await uchwytPliku.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        if ((await uchwytPliku.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('brak zgody na zapis');
+      }
+      const w = await uchwytPliku.createWritable();
+      await w.write(tekstPliku()); await w.close();
+      zrodlo = 'plik ' + uchwytPliku.name + ' (z komputera)'; pokazZrodlo();
+      ustawZmiany(false); komunikat('Zapisano: ' + uchwytPliku.name);
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      alert('Nie udało się zapisać (' + e.message + '). Pobiorę plik do folderu Downloads.');
+    }
+  }
+  pobierz();
+}
+function pobierz() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([tekstPliku()], { type: 'application/json' }));
+  a.download = 'zestawy.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  ustawZmiany(false);
+  komunikat('Pobrano zestawy.json');
+}
+window.addEventListener('beforeunload', e => { if (zmiany) { e.preventDefault(); e.returnValue = ''; } });
+
+// ================== Tekst dla Claude ==================
+function tekstDlaClaude(z) {
+  const L = [];
+  L.push('Robimy nowy program na tym zestawie:');
+  L.push('');
+  L.push('=== ' + z.nazwa + ' ===');
+  const pole = (n, v) => { if (v) L.push(n + ': ' + v); };
+  pole('Płytka', z.plytka); pole('Ekran', z.ekran); pole('Sterownik ekranu', z.sterownik);
+  pole('Dotyk', z.dotyk); pole('Karta SD', z.sd); pole('Stan opisu', z.stan);
+  if (z.piny.length) {
+    L.push(''); L.push('PINY:');
+    z.piny.forEach(p => L.push('- ' + [p.grupa, p.sygnal].filter(Boolean).join(' ') + ': GPIO ' + (p.gpio || '?') + (p.uwaga ? '  (' + p.uwaga + ')' : '')));
+  }
+  if (z.biblioteki.length) {
+    L.push(''); L.push('BIBLIOTEKI:');
+    z.biblioteki.forEach(b => L.push('- ' + b.nazwa + (b.wersja ? ' ' + b.wersja : '') + (b.uwaga ? '  (' + b.uwaga + ')' : '')));
+  }
+  if (z.ide) { L.push(''); L.push('USTAWIENIA ARDUINO IDE:'); L.push(z.ide); }
+  if (z.konfiguracja) { L.push(''); L.push('KONFIGURACJA / DZIAŁAJĄCE USTAWIENIA:'); L.push(z.konfiguracja); }
+  if (z.uwagi) { L.push(''); L.push('UWAGI:'); L.push(z.uwagi); }
+  if (dane.ustawienia.srodowisko) { L.push(''); L.push('MOJE ŚRODOWISKO:'); L.push(dane.ustawienia.srodowisko); }
+  L.push(''); L.push('Opis zestawu: ' + adresZestawu(z));
+  return L.join('\n');
+}
+async function kopiuj(id) {
+  const t = tekstDlaClaude(znajdz(id));
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  komunikat('Skopiowano - wklej to do rozmowy z Claude');
+}
+async function udostepnij(id) {
+  const z = znajdz(id);
+  try { await navigator.share({ title: z.nazwa, text: tekstDlaClaude(z) }); } catch (e) { }
+}
+
+// ================== Widoki ==================
+function idz(h) { location.hash = h ? '#' + h : '#'; if (!h) render(); }
+
+function render() {
+  pokazZrodlo();
+  const h = decodeURIComponent(location.hash.replace(/^#/, ''));
+  const [widok, id] = [h.split('/')[0], h.split('/').slice(1).join('/')];
+  window.scrollTo(0, 0);
+  if (widok === 'z' && id) return widokZestawu(id);
+  if (widok === 'edytuj') return widokEdycji(id);
+  if (widok === 'naklejki') return widokNaklejek(id);
+  if (widok === 'ustawienia') return widokUstawien();
+  widokListy();
+}
+
+function widokListy() {
+  const t = $('tresc');
+  let html = '';
+  if (!dane.zestawy.length) {
+    html += '<div class="panel"><h2>Brak zestawów</h2><p>Nie udało się wczytać pliku <b>zestawy.json</b>. ' +
+      'Kliknij <b>📂 Otwórz</b> i wybierz plik z OneDrive, albo dodaj nowy zestaw.</p></div>';
+  }
+  html += '<input class="szukaj" id="szukaj" placeholder="🔍 Szukaj (np. ST7796, ESP32-S3, GT911)…" oninput="filtruj()">';
+  html += '<div class="akcje nie-drukuj"><button class="glowny" onclick="nowyZestaw()">➕ Nowy zestaw</button></div>';
+  html += '<div class="siatka" id="siatka"></div>';
+  t.innerHTML = html;
+  filtruj();
+}
+function filtruj() {
+  const q = ($('szukaj') ? $('szukaj').value : '').toLowerCase();
+  const lista = dane.zestawy.filter(z => !q || JSON.stringify([z.nazwa, z.plytka, z.ekran, z.sterownik, z.dotyk, z.uwagi, z.piny, z.biblioteki]).toLowerCase().includes(q));
+  $('siatka').innerHTML = lista.map(z => {
+    const foto = z.zdjecie ? 'style="background-image:url(' + z.zdjecie + ')"' : '';
+    return '<div class="karta" onclick="idz(\'z/' + esc(z.id) + '\')">' +
+      '<div class="foto" ' + foto + '>' + (z.zdjecie ? '' : '📟') + '</div>' +
+      '<div class="opis"><h3>' + esc(z.nazwa) + '</h3>' +
+      '<p>' + esc([z.sterownik, z.ekran].filter(Boolean).join(' · ')) + '</p>' +
+      znaczekStanu(z) + '</div></div>';
+  }).join('') || '<p class="male">Nic nie znaleziono.</p>';
+}
+function znaczekStanu(z) {
+  const ok = z.stan === 'sprawdzony';
+  return '<span class="stan ' + (ok ? 'sprawdzony' : 'inny') + '">' + (ok ? '✅ ' : '⚠️ ') + esc(z.stan || 'do sprawdzenia') + '</span>';
+}
+
+function widokZestawu(id) {
+  const z = znajdz(id), t = $('tresc');
+  if (!z) {
+    t.innerHTML = '<div class="panel"><h2>Nie znaleziono zestawu „' + esc(id) + '”</h2><p>Może plik zestawy.json na GitHubie nie jest jeszcze zaktualizowany.</p>' +
+      '<button onclick="idz(\'\')">← Wszystkie zestawy</button></div>';
+    return;
+  }
+  const wiersz = (n, v) => v ? '<tr><td>' + n + '</td><td>' + esc(v) + '</td></tr>' : '';
+  let html = '<div class="akcje nie-drukuj">' +
+    '<button onclick="idz(\'\')">← Wszystkie</button>' +
+    '<button class="glowny" onclick="kopiuj(\'' + esc(z.id) + '\')">📋 Kopiuj dla Claude</button>' +
+    (navigator.share ? '<button onclick="udostepnij(\'' + esc(z.id) + '\')">📤 Wyślij</button>' : '') +
+    '<button onclick="idz(\'edytuj/' + esc(z.id) + '\')">✏️ Edytuj</button>' +
+    '<button onclick="idz(\'naklejki/' + esc(z.id) + '\')">🏷️ Naklejka</button></div>';
+
+  html += '<div class="panel"><div class="gora">' +
+    (z.zdjecie ? '<img class="zdjecie" src="' + z.zdjecie + '" alt="">' : '') +
+    '<div class="info"><h2 style="font-size:21px">' + esc(z.nazwa) + '</h2>' + znaczekStanu(z) +
+    '<table style="margin-top:10px">' + wiersz('Płytka', z.plytka) + wiersz('Ekran', z.ekran) + wiersz('Sterownik', z.sterownik) +
+    wiersz('Dotyk', z.dotyk) + wiersz('Karta SD', z.sd) + '</table></div>' +
+    '<div class="qrbox">' + QR.svg(adresZestawu(z)) + '<div>' + esc(z.id) + '</div></div>' +
+    '</div></div>';
+
+  if (z.piny.length) {
+    html += '<div class="panel"><h2>📌 Piny</h2><table><tr><th>Część</th><th>Sygnał</th><th>GPIO</th><th>Uwagi</th></tr>' +
+      z.piny.map(p => '<tr><td>' + esc(p.grupa) + '</td><td>' + esc(p.sygnal) + '</td><td class="gpio">' + esc(p.gpio) + '</td><td>' + esc(p.uwaga) + '</td></tr>').join('') +
+      '</table></div>';
+  }
+  if (z.biblioteki.length) {
+    html += '<div class="panel"><h2>📚 Biblioteki</h2><table><tr><th>Nazwa</th><th>Wersja</th><th>Uwagi</th></tr>' +
+      z.biblioteki.map(b => '<tr><td><b>' + esc(b.nazwa) + '</b></td><td>' + esc(b.wersja) + '</td><td>' + esc(b.uwaga) + '</td></tr>').join('') +
+      '</table></div>';
+  }
+  if (z.ide) html += '<div class="panel"><h2>⚙️ Ustawienia Arduino IDE</h2><p class="tekst">' + esc(z.ide) + '</p></div>';
+  if (z.konfiguracja) html += '<div class="panel"><h2>🧩 Konfiguracja (działające ustawienia)</h2><pre>' + esc(z.konfiguracja) + '</pre></div>';
+  if (z.uwagi) html += '<div class="panel"><h2>📝 Uwagi</h2><p class="tekst">' + esc(z.uwagi) + '</p></div>';
+  t.innerHTML = html;
+}
+
+// ================== Edytor ==================
+function nowyZestaw() {
+  edyt = pustyZestaw(); edytNowy = true;
+  location.hash = '#edytuj/';
+}
+function widokEdycji(id) {
+  if (id) {
+    const z = znajdz(id);
+    if (!z) return idz('');
+    if (!edyt || edytNowy || edyt._oryg !== id) { edyt = JSON.parse(JSON.stringify(z)); edyt._oryg = id; edytNowy = false; }
+  } else if (!edyt || !edytNowy) { edyt = pustyZestaw(); edytNowy = true; }
+  rysujEdytor();
+}
+function pole(nazwa, klucz, podpowiedz) {
+  return '<label>' + nazwa + '</label><input type="text" value="' + esc(edyt[klucz]) + '" placeholder="' + esc(podpowiedz || '') + '" oninput="edyt.' + klucz + '=this.value' + (klucz === 'nazwa' ? ';autoId()' : '') + '">';
+}
+function rysujEdytor() {
+  const e = edyt;
+  let html = '<div class="akcje"><button class="glowny" onclick="gotowe()">✔ Gotowe</button><button onclick="anuluj()">Anuluj</button>' +
+    (edytNowy ? '' : '<button class="czerwony" onclick="usunZestaw()" style="margin-left:auto">🗑 Usuń zestaw</button>') + '</div>';
+  html += '<div class="panel"><h2>' + (edytNowy ? '➕ Nowy zestaw' : '✏️ Edycja: ' + esc(e.nazwa)) + '</h2><div class="dwie"><div>' +
+    pole('Nazwa', 'nazwa', 'np. ESP32-3248S035 (Sunton 3,5")') +
+    '<label>Krótka nazwa w kodzie QR (tylko a-z, 0-9, -)</label><input type="text" id="poleId" value="' + esc(e.id) + '" oninput="edyt.id=this.value;edyt._idReczne=true">' +
+    (edytNowy ? '' : '<div class="male">Uwaga: zmiana tej nazwy = stare naklejki przestaną działać.</div>') +
+    pole('Płytka ESP', 'plytka', 'np. ESP32 DevKit 38-pin') +
+    pole('Ekran', 'ekran', 'np. 3,5" 480x320') +
+    '</div><div>' +
+    pole('Sterownik ekranu', 'sterownik', 'np. ILI9488, ST7796') +
+    pole('Dotyk', 'dotyk', 'np. XPT2046 / GT911 / brak') +
+    pole('Karta SD', 'sd', 'np. tak - wspólne SPI z TFT') +
+    '<label>Stan</label><select onchange="edyt.stan=this.value">' +
+    ['sprawdzony', 'do sprawdzenia', 'do uzupełnienia'].map(s => '<option' + (e.stan === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>' +
+    '</div></div>' +
+    '<label>Zdjęcie</label><div class="akcje" style="margin:0;align-items:center">' +
+    (e.zdjecie ? '<img src="' + e.zdjecie + '" style="height:80px;border-radius:6px">' : '') +
+    '<button onclick="$(\'zdjecieWejscie\').click()">📷 Wybierz zdjęcie</button>' +
+    (e.zdjecie ? '<button onclick="edyt.zdjecie=\'\';rysujEdytor()">Usuń zdjęcie</button>' : '') + '</div></div>';
+
+  html += '<div class="panel"><h2>📌 Piny</h2><table class="edytor-tab"><tr><th>Część</th><th>Sygnał</th><th>GPIO</th><th>Uwagi</th><th></th></tr>' +
+    e.piny.map((p, i) => '<tr>' +
+      ['grupa', 'sygnal', 'gpio', 'uwaga'].map(k => '<td><input type="text" value="' + esc(p[k]) + '" oninput="edyt.piny[' + i + '].' + k + '=this.value"></td>').join('') +
+      '<td style="white-space:nowrap"><button title="w górę" onclick="przesun(\'piny\',' + i + ',-1)">↑</button><button title="usuń" onclick="edyt.piny.splice(' + i + ',1);rysujEdytor()">✖</button></td></tr>').join('') +
+    '</table><div class="akcje"><button onclick="dodajPin()">➕ Dodaj pin</button>' +
+    '<button onclick="dodajGrupe(\'TFT\',[\'CS\',\'DC\',\'RST\',\'SCK\',\'MOSI\',\'MISO\',\'BL (podświetlenie)\'])">+ komplet TFT</button>' +
+    '<button onclick="dodajGrupe(\'Dotyk XPT2046\',[\'CS\',\'IRQ\',\'SCK\',\'MOSI\',\'MISO\'])">+ dotyk XPT2046</button>' +
+    '<button onclick="dodajGrupe(\'Dotyk GT911\',[\'SDA\',\'SCL\',\'INT\',\'RST\'])">+ dotyk GT911</button>' +
+    '<button onclick="dodajGrupe(\'SD\',[\'CS\',\'SCK\',\'MOSI\',\'MISO\'])">+ karta SD</button></div></div>';
+
+  html += '<div class="panel"><h2>📚 Biblioteki</h2><table class="edytor-tab"><tr><th>Nazwa</th><th>Wersja</th><th>Uwagi</th><th></th></tr>' +
+    e.biblioteki.map((b, i) => '<tr>' +
+      ['nazwa', 'wersja', 'uwaga'].map(k => '<td><input type="text" value="' + esc(b[k]) + '" oninput="edyt.biblioteki[' + i + '].' + k + '=this.value"></td>').join('') +
+      '<td style="white-space:nowrap"><button onclick="przesun(\'biblioteki\',' + i + ',-1)">↑</button><button onclick="edyt.biblioteki.splice(' + i + ',1);rysujEdytor()">✖</button></td></tr>').join('') +
+    '</table><div class="akcje"><button onclick="edyt.biblioteki.push({nazwa:\'\',wersja:\'\',uwaga:\'\'});rysujEdytor()">➕ Dodaj bibliotekę</button></div></div>';
+
+  html += '<div class="panel"><h2>⚙️ Ustawienia Arduino IDE</h2><textarea oninput="edyt.ide=this.value" placeholder="Płytka: ESP32 Dev Module&#10;Partition Scheme: …">' + esc(e.ide) + '</textarea>' +
+    '<h2 style="margin-top:14px">🧩 Konfiguracja</h2><div class="male">Np. klasa LGFX z działającego szablonu, calData, setRotation…</div>' +
+    '<textarea class="kod" oninput="edyt.konfiguracja=this.value">' + esc(e.konfiguracja) + '</textarea>' +
+    '<h2 style="margin-top:14px">📝 Uwagi</h2><textarea oninput="edyt.uwagi=this.value">' + esc(e.uwagi) + '</textarea></div>';
+  html += '<div class="akcje"><button class="glowny" onclick="gotowe()">✔ Gotowe</button><button onclick="anuluj()">Anuluj</button></div>';
+  $('tresc').innerHTML = html;
+}
+function autoId() {
+  if (edytNowy && !edyt._idReczne) { edyt.id = slug(edyt.nazwa); const p = $('poleId'); if (p) p.value = edyt.id; }
+}
+function dodajPin() { edyt.piny.push({ grupa: '', sygnal: '', gpio: '', uwaga: '' }); rysujEdytor(); }
+function dodajGrupe(g, sygnaly) { sygnaly.forEach(s => edyt.piny.push({ grupa: g, sygnal: s, gpio: '', uwaga: '' })); rysujEdytor(); }
+function przesun(lista, i, o) {
+  const a = edyt[lista], j = i + o; if (j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; rysujEdytor();
+}
+$('zdjecieWejscie').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try { edyt.zdjecie = await zmniejszZdjecie(f); rysujEdytor(); } catch (e) { alert('Nie udało się wczytać zdjęcia'); }
+  ev.target.value = '';
+});
+function zmniejszZdjecie(file) {
+  return new Promise((ok, blad) => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 800, s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      ok(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = blad;
+    img.src = URL.createObjectURL(file);
+  });
+}
+function gotowe() {
+  const e = edyt;
+  e.nazwa = e.nazwa.trim();
+  e.id = slug(e.id || e.nazwa);
+  if (!e.nazwa) return alert('Wpisz nazwę zestawu.');
+  if (!e.id) return alert('Wpisz krótką nazwę do kodu QR.');
+  const inny = dane.zestawy.find(z => z.id === e.id && z.id !== e._oryg);
+  if (inny) return alert('Krótka nazwa „' + e.id + '” jest już zajęta przez: ' + inny.nazwa);
+  e.piny = e.piny.filter(p => p.grupa || p.sygnal || p.gpio || p.uwaga);
+  e.biblioteki = e.biblioteki.filter(b => b.nazwa);
+  const oryg = e._oryg; delete e._oryg; delete e._idReczne;
+  if (edytNowy) dane.zestawy.push(e);
+  else { const i = dane.zestawy.findIndex(z => z.id === oryg); dane.zestawy[i] = e; }
+  edyt = null; edytNowy = false;
+  ustawZmiany(true);
+  idz('z/' + e.id);
+}
+function anuluj() { const id = edyt && edyt._oryg; edyt = null; edytNowy = false; idz(id ? 'z/' + id : ''); }
+function usunZestaw() {
+  if (!confirm('Na pewno usunąć zestaw „' + edyt.nazwa + '”?')) return;
+  dane.zestawy = dane.zestawy.filter(z => z.id !== edyt._oryg);
+  edyt = null; ustawZmiany(true); idz('');
+}
+
+// ================== Naklejki ==================
+function widokNaklejek(id) {
+  if (!wybraneNaklejki || id) wybraneNaklejki = new Set(id ? [id] : dane.zestawy.map(z => z.id));
+  const zapamietaj = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+  const roz = zapamietaj('nakl_roz', '30'), kopie = zapamietaj('nakl_kopie', '1'), tekst2 = zapamietaj('nakl_t2', 'tak');
+  let html = '<div class="panel nie-drukuj"><h2>🏷️ Naklejki do druku</h2>' +
+    '<div class="dwie"><div><label>Które zestawy</label><div class="wybor-naklejek">' +
+    dane.zestawy.map(z => '<label><input type="checkbox" ' + (wybraneNaklejki.has(z.id) ? 'checked' : '') + ' onchange="przelacz(\'' + esc(z.id) + '\',this.checked)">' + esc(z.nazwa) + '</label>').join('') +
+    '</div><div class="akcje"><button onclick="wszystkie(true)">Zaznacz wszystkie</button><button onclick="wszystkie(false)">Odznacz</button></div></div>' +
+    '<div><label>Szerokość naklejki</label><select id="nRoz" onchange="arkusz()">' +
+    ['20', '25', '30', '35', '40', '50'].map(v => '<option value="' + v + '"' + (v === roz ? ' selected' : '') + '>' + v + ' mm</option>').join('') + '</select>' +
+    '<label>Ile sztuk każdej</label><input type="number" id="nKopie" min="1" max="20" value="' + esc(kopie) + '" oninput="arkusz()">' +
+    '<label>Druga linijka (sterownik ekranu)</label><select id="nT2" onchange="arkusz()"><option value="tak"' + (tekst2 === 'tak' ? ' selected' : '') + '>pokaż</option><option value="nie"' + (tekst2 === 'nie' ? ' selected' : '') + '>ukryj</option></select>' +
+    '<p class="male">Kod QR mniejszy niż 20 mm może być trudny do zeskanowania. Drukuj w skali 100% (w oknie drukowania: <b>Skalierung: Standard</b> albo <b>100</b>).</p>' +
+    '<div class="akcje"><button class="glowny" onclick="window.print()">🖨️ Drukuj</button></div></div></div></div>' +
+    '<div class="arkusz" id="arkusz"></div>';
+  $('tresc').innerHTML = html;
+  arkusz();
+}
+function przelacz(id, v) { v ? wybraneNaklejki.add(id) : wybraneNaklejki.delete(id); arkusz(); }
+function wszystkie(v) { wybraneNaklejki = new Set(v ? dane.zestawy.map(z => z.id) : []); widokNaklejek(); }
+function arkusz() {
+  const roz = $('nRoz').value, kopie = Math.max(1, Math.min(20, parseInt($('nKopie').value) || 1)), t2 = $('nT2').value;
+  try { localStorage.setItem('nakl_roz', roz); localStorage.setItem('nakl_kopie', kopie); localStorage.setItem('nakl_t2', t2); } catch (e) { }
+  let html = '';
+  dane.zestawy.filter(z => wybraneNaklejki.has(z.id)).forEach(z => {
+    const jedna = '<div class="naklejka" style="--w:' + roz + '">' + QR.svg(adresZestawu(z)) +
+      '<div class="n1">' + esc(z.nazwa) + '</div>' +
+      (t2 === 'tak' && z.sterownik ? '<div class="n2">' + esc(z.sterownik.split(/[ (]/)[0]) + '</div>' : '') + '</div>';
+    for (let i = 0; i < kopie; i++) html += jedna;
+  });
+  $('arkusz').innerHTML = html || '<p class="male">Zaznacz co najmniej jeden zestaw.</p>';
+}
+
+// ================== Ustawienia ==================
+function widokUstawien() {
+  const u = dane.ustawienia;
+  $('tresc').innerHTML = '<div class="panel"><h2>⚙️ Ustawienia</h2>' +
+    '<label>Adres strony na GitHub (z niego robione są kody QR)</label>' +
+    '<input type="text" value="' + esc(u.adresStrony) + '" oninput="dane.ustawienia.adresStrony=this.value;ustawZmiany(true)">' +
+    '<label>Moje środowisko (dodawane na końcu tekstu „Kopiuj dla Claude”)</label>' +
+    '<textarea style="min-height:180px" oninput="dane.ustawienia.srodowisko=this.value;ustawZmiany(true)">' + esc(u.srodowisko) + '</textarea>' +
+    '<div class="akcje"><button onclick="idz(\'\')">← Wróć</button></div></div>' +
+    '<div class="panel"><h2>ℹ️ Jak to działa</h2><p class="tekst">1. Na laptopie kliknij 📂 Otwórz i wybierz zestawy.json z OneDrive.\n' +
+    '2. Dodaj albo popraw zestawy, potem 💾 Zapisz (zapisze do tego samego pliku w OneDrive).\n' +
+    '3. Wgraj ten plik na GitHub do repozytorium Zestawy-ESP - wtedy kody QR pokażą nowe dane.\n' +
+    '4. 🏷️ Naklejki - wydrukuj i przyklej pod obudowę.\n' +
+    '5. Telefonem zeskanuj naklejkę → 📋 Kopiuj dla Claude albo 📤 Wyślij → wklej do rozmowy.</p></div>';
+}
+
+// ================== Start ==================
+(async function start() {
+  const z = new URLSearchParams(location.search).get('z');
+  if (z) history.replaceState(null, '', location.pathname + '#z/' + encodeURIComponent(z));
+  await wczytajZGithuba();
+  window.addEventListener('hashchange', render);
+  render();
+})();
+</script>
+</body>
+</html>

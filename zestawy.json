@@ -1,0 +1,260 @@
+{
+ "ustawienia": {
+  "adresStrony": "https://rumburak7.github.io/Zestawy-ESP/",
+  "srodowisko": "Arduino IDE 1.8.19 (Windows, po niemiecku), płytki ESP32 w wersji 2.0.17.\nKażdy projekt ma własny folder libraries (Sketchbook ustawiony na folder projektu).\nWolę JEDEN plik .ino.\nNie używać R\"(...)\" z JavaScriptem w .ino - w mojej wersji IDE są błędy kompilacji.\nWiFi (dom + hotspot w telefonie) zapisane w pamięci/na SD i zmieniane przez stronę WWW - jak w Krokomierzu.\nObrazki/strony do folderu data (Sketch Data Upload), jeśli to ma sens.\nPodpis w programie: autor Adam Bryks."
+ },
+ "zestawy": [
+  {
+   "id": "esp32-3248s035",
+   "nazwa": "ESP32-3248S035 (Sunton 3,5\")",
+   "stan": "sprawdzony",
+   "plytka": "ESP32-3248S035 (ESP32 WROOM, bez PSRAM, ekran wbudowany)",
+   "ekran": "3,5\" 480x320",
+   "sterownik": "ST7796",
+   "dotyk": "pojemnościowy GT911 (I2C)",
+   "sd": "tak - gniazdo na płytce (VSPI)",
+   "ide": "Płytka: ESP32 Dev Module\nPartition Scheme: Huge APP (3MB No OTA/1MB SPIFFS) - dla dużych programów (np. K2 Monitor), inaczej ESP ciągle się restartuje",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "SCK", "gpio": "14", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "13", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "MISO", "gpio": "12", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "2", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "15", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "BL (podświetlenie)", "gpio": "27", "uwaga": ""},
+    {"grupa": "Dotyk GT911", "sygnal": "SDA", "gpio": "33", "uwaga": "I2C port 0, adres 0x5D"},
+    {"grupa": "Dotyk GT911", "sygnal": "SCL", "gpio": "32", "uwaga": ""},
+    {"grupa": "Dotyk GT911", "sygnal": "INT", "gpio": "36", "uwaga": "bez RST"},
+    {"grupa": "SD", "sygnal": "CS", "gpio": "5", "uwaga": "osobna magistrala VSPI"},
+    {"grupa": "SD", "sygnal": "SCK", "gpio": "18", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MOSI", "gpio": "23", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MISO", "gpio": "19", "uwaga": ""}
+   ],
+   "biblioteki": [
+    {"nazwa": "LovyanGFX", "wersja": "", "uwaga": "ekran + dotyk"},
+    {"nazwa": "PNGdec", "wersja": "", "uwaga": "tylko gdy trzeba pokazać PNG (np. mapy)"}
+   ],
+   "konfiguracja": "LovyanGFX: Panel_ST7796 + Touch_GT911\nsetRotation(1)\nDziałający test: Test_Dotykowy.ino",
+   "uwagi": "Migotanie: nadpisywać tekst spacjami zamiast czyścić ekran (bez sprite - brak PSRAM).\nW projekcie GPS moduł GNSS był na GPIO22 = TX, GPIO21 = RX.",
+   "zdjecie": ""
+  },
+  {
+   "id": "esp32-2432s028",
+   "nazwa": "ESP32-2432S028 (2,8\")",
+   "stan": "do sprawdzenia",
+   "plytka": "ESP32-2432S028 (ESP32 WROOM, ekran wbudowany)",
+   "ekran": "2,8\" 320x240",
+   "sterownik": "ILI9341 (niektóre wersje ST7789)",
+   "dotyk": "rezystancyjny XPT2046 (osobne piny)",
+   "sd": "tak - gniazdo na płytce (VSPI)",
+   "ide": "Płytka: ESP32 Dev Module",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "SCK", "gpio": "14", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "13", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "MISO", "gpio": "12", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "2", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "15", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "BL (podświetlenie)", "gpio": "21", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "CLK", "gpio": "25", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "MOSI", "gpio": "32", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "MISO", "gpio": "39", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "CS", "gpio": "33", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "IRQ", "gpio": "36", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "CS", "gpio": "5", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "SCK", "gpio": "18", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MOSI", "gpio": "23", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MISO", "gpio": "19", "uwaga": ""},
+    {"grupa": "LED RGB", "sygnal": "R / G / B", "gpio": "4 / 16 / 17", "uwaga": "świeci przy LOW"},
+    {"grupa": "Czujnik światła", "sygnal": "LDR", "gpio": "34", "uwaga": ""},
+    {"grupa": "Głośnik", "sygnal": "SPEAK", "gpio": "26", "uwaga": ""}
+   ],
+   "biblioteki": [
+    {"nazwa": "LovyanGFX", "wersja": "", "uwaga": ""}
+   ],
+   "konfiguracja": "",
+   "uwagi": "To są standardowe piny tej płytki - porównaj z programem Radar_Samolotow (działa od 25.11.2026) i popraw, jeśli coś się różni.",
+   "zdjecie": ""
+  },
+  {
+   "id": "esp32-tft35-ili9488",
+   "nazwa": "ESP32 DevKit + TFT 3,5\" ILI9488 + SD",
+   "stan": "sprawdzony",
+   "plytka": "ESP32 DevKit 38-pin (WROOM) na płytce uniwersalnej",
+   "ekran": "3,5\" SPI 480x320 (VCC do 5V/VIN - moduł ma własny stabilizator)",
+   "sterownik": "ILI9488",
+   "dotyk": "rezystancyjny XPT2046 (osobna magistrala HSPI)",
+   "sd": "tak - wspólne SCK/MOSI/MISO z TFT",
+   "ide": "Płytka: ESP32 Dev Module",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "5", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "2", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "RST", "gpio": "4", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "23", "uwaga": "wspólne z SD"},
+    {"grupa": "TFT", "sygnal": "MISO", "gpio": "19", "uwaga": "wspólne z SD"},
+    {"grupa": "TFT", "sygnal": "SCLK", "gpio": "18", "uwaga": "wspólne z SD"},
+    {"grupa": "TFT", "sygnal": "BL (podświetlenie)", "gpio": "32", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "CS", "gpio": "15", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "MOSI", "gpio": "13", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "MISO", "gpio": "12", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "SCLK", "gpio": "14", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "CS", "gpio": "26", "uwaga": "GPIO33 nie ma na tej płytce"}
+   ],
+   "biblioteki": [
+    {"nazwa": "LovyanGFX", "wersja": "", "uwaga": ""},
+    {"nazwa": "SD (wbudowana w ESP32)", "wersja": "", "uwaga": ""}
+   ],
+   "konfiguracja": "Bazowy szablon: szablon_tft_touch_sd.ino\nPanel offset_rotation = 0, dotyk offset_rotation = 6, dotyk freq = 1000000\nsetRotation(1)\nDotyk odwrócony w programie: x = tft.width() - x, y = tft.height() - y (funkcja pobierzDotyk())\ncalData = {3749, 3883, 3765, 292, 276, 3879, 309, 283}",
+   "uwagi": "Projekty na tym sprzęcie: Poziomica (WASSERWAGE), Stacja pogody, Zegar Ogień, Pięć w rzędzie.",
+   "zdjecie": ""
+  },
+  {
+   "id": "az-touch-mod",
+   "nazwa": "AZ-Touch MOD (ESP32 + ILI9341 2,8\")",
+   "stan": "sprawdzony",
+   "plytka": "AZ-Touch MOD (AZ-Delivery), ESP32 wpięty w gniazda",
+   "ekran": "240x320",
+   "sterownik": "ILI9341",
+   "dotyk": "rezystancyjny XPT2046 (wspólna magistrala VSPI z TFT)",
+   "sd": "gniazdo na module NIE jest podłączone - trzeba dolutować 4 przewody",
+   "ide": "Płytka: ESP32 Dev Module",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "5", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "4", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "RST", "gpio": "22", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "SCLK", "gpio": "18", "uwaga": "wspólne z dotykiem"},
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "23", "uwaga": "wspólne z dotykiem"},
+    {"grupa": "TFT", "sygnal": "MISO", "gpio": "19", "uwaga": "wspólne z dotykiem"},
+    {"grupa": "TFT", "sygnal": "BL (podświetlenie)", "gpio": "15", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "CS", "gpio": "14", "uwaga": ""},
+    {"grupa": "Dotyk XPT2046", "sygnal": "IRQ", "gpio": "27", "uwaga": ""},
+    {"grupa": "Buzzer", "sygnal": "piezo", "gpio": "21", "uwaga": "wbudowany"}
+   ],
+   "biblioteki": [
+    {"nazwa": "LovyanGFX", "wersja": "", "uwaga": ""}
+   ],
+   "konfiguracja": "calData = {3796, 412, 3743, 3830, 361, 402, 288, 3838}\nKalibracja przez tft.calibrateTouch",
+   "uwagi": "",
+   "zdjecie": ""
+  },
+  {
+   "id": "ttgo-t-display",
+   "nazwa": "TTGO T-Display (ESP32 1,14\")",
+   "stan": "do sprawdzenia",
+   "plytka": "LilyGO TTGO T-Display (ESP32, USB-C, 2 przyciski)",
+   "ekran": "1,14\" 135x240 (wbudowany)",
+   "sterownik": "ST7789",
+   "dotyk": "brak",
+   "sd": "brak",
+   "ide": "Płytka: ESP32 Dev Module",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "19", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "SCLK", "gpio": "18", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "5", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "16", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "RST", "gpio": "23", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "BL (podświetlenie)", "gpio": "4", "uwaga": ""},
+    {"grupa": "Przyciski", "sygnal": "lewy / prawy", "gpio": "0 / 35", "uwaga": ""},
+    {"grupa": "Bateria", "sygnal": "pomiar napięcia", "gpio": "34", "uwaga": "ADC_EN = 14"}
+   ],
+   "biblioteki": [],
+   "konfiguracja": "",
+   "uwagi": "Standardowe piny tej płytki - porównaj ze swoim programem stacji pogody na T-Display i popraw.",
+   "zdjecie": ""
+  },
+  {
+   "id": "esp32-s3-st7735",
+   "nazwa": "ESP32-S3 DevKitC-1 + TFT 1,8\" ST7735 + SD",
+   "stan": "do uzupełnienia",
+   "plytka": "ESP32-S3 DevKitC-1 (2x USB-C, bez Octal-PSRAM)",
+   "ekran": "1,8\" SPI 128x160",
+   "sterownik": "ST7735",
+   "dotyk": "brak",
+   "sd": "tak - osobny czytnik",
+   "ide": "Płytka: ESP32S3 Dev Module",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "CS / DC / RST / SCK / MOSI", "gpio": "?", "uwaga": "uzupełnij ze swojego szablonu"},
+    {"grupa": "SD", "sygnal": "SCK", "gpio": "36", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MOSI", "gpio": "35", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MISO", "gpio": "37", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "CS", "gpio": "21", "uwaga": ""}
+   ],
+   "biblioteki": [
+    {"nazwa": "LovyanGFX", "wersja": "", "uwaga": ""}
+   ],
+   "konfiguracja": "",
+   "uwagi": "Masz do tego gotowy szablon (.ino + README).",
+   "zdjecie": ""
+  },
+  {
+   "id": "esp32-s3-n16r8-tft35",
+   "nazwa": "ESP32-S3 N16R8 + TFT 3,5\" + SD + CH376S",
+   "stan": "do uzupełnienia",
+   "plytka": "ESP32-S3 DevKitC-1 N16R8 (Octal-PSRAM, GPIO 35/36/37 zajęte)",
+   "ekran": "3,5\" SPI z dotykiem (w obudowie obrócony o 180°)",
+   "sterownik": "?",
+   "dotyk": "?",
+   "sd": "tak - osobny moduł microSD na 3V3",
+   "ide": "Płytka: ESP32S3 Dev Module\nPSRAM: OPI PSRAM, Flash Size: 16MB (sprawdzić)",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "?", "gpio": "?", "uwaga": "uzupełnij"},
+    {"grupa": "SD", "sygnal": "SCK", "gpio": "12", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MOSI", "gpio": "11", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "MISO", "gpio": "13", "uwaga": ""},
+    {"grupa": "SD", "sygnal": "CS", "gpio": "21", "uwaga": ""},
+    {"grupa": "CH376S", "sygnal": "?", "gpio": "?", "uwaga": "uzupełnij"}
+   ],
+   "biblioteki": [],
+   "konfiguracja": "",
+   "uwagi": "Pin 5V bez napięcia - mostek IN-OUT nie jest zalutowany.\nNa tym sprzęcie działa Tester SD/USB.",
+   "zdjecie": ""
+  },
+  {
+   "id": "nodemcu-st7789",
+   "nazwa": "ESP8266 NodeMCU + TFT ST7789 240x320",
+   "stan": "sprawdzony",
+   "plytka": "ESP8266 NodeMCU",
+   "ekran": "240x320 (rotacja 0)",
+   "sterownik": "ST7789",
+   "dotyk": "brak",
+   "sd": "brak",
+   "ide": "Płytka: NodeMCU 1.0 (ESP-12E Module)",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "15 (D8)", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "0 (D3)", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "RST", "gpio": "2 (D4)", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "SCK", "gpio": "14 (D5)", "uwaga": "SPI sprzętowe"},
+    {"grupa": "TFT", "sygnal": "MOSI", "gpio": "13 (D7)", "uwaga": "SPI sprzętowe"},
+    {"grupa": "TFT", "sygnal": "BL", "gpio": "-", "uwaga": "bez sterowania z GPIO"},
+    {"grupa": "INA219", "sygnal": "SDA", "gpio": "4 (D2)", "uwaga": ""},
+    {"grupa": "INA219", "sygnal": "SCL", "gpio": "5 (D1)", "uwaga": ""}
+   ],
+   "biblioteki": [],
+   "konfiguracja": "",
+   "uwagi": "Sprzęt projektu Miernik Zużycia Energii.",
+   "zdjecie": ""
+  },
+  {
+   "id": "d1mini-tft35",
+   "nazwa": "ESP8266 Wemos D1 mini + TFT 3,5\" dotykowy",
+   "stan": "do uzupełnienia",
+   "plytka": "Wemos D1 mini (ESP8266)",
+   "ekran": "3,5\" SPI z dotykiem",
+   "sterownik": "? (ILI9341 / ILI9488 / ST7796 - sprawdzić)",
+   "dotyk": "XPT2046",
+   "sd": "brak",
+   "ide": "Płytka: LOLIN(WEMOS) D1 R2 & mini",
+   "piny": [
+    {"grupa": "TFT", "sygnal": "CS", "gpio": "D8", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "DC", "gpio": "D4", "uwaga": ""},
+    {"grupa": "TFT", "sygnal": "RESET", "gpio": "RST", "uwaga": "do pinu RST płytki"},
+    {"grupa": "TFT", "sygnal": "BL", "gpio": "3V3", "uwaga": "na stałe, bez sterowania"},
+    {"grupa": "SPI", "sygnal": "SCK / MOSI / MISO", "gpio": "D5 / D7 / D6", "uwaga": "wspólne TFT + dotyk"},
+    {"grupa": "Dotyk", "sygnal": "CS", "gpio": "D2", "uwaga": ""},
+    {"grupa": "Dotyk", "sygnal": "IRQ", "gpio": "D1", "uwaga": ""}
+   ],
+   "biblioteki": [],
+   "konfiguracja": "",
+   "uwagi": "Sprzęt projektu Wetter Station.",
+   "zdjecie": ""
+  }
+ ]
+}
