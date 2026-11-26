@@ -654,7 +654,8 @@ async function rysujFolder(id, prosOZgode) {
   window._wpisy = wpisy;
   const droga = folderStos.map(f => esc(f.name)).join(' / ');
   html += '<div class="akcje" style="margin-top:0;align-items:center"><b>📁 ' + droga + '</b>' +
-    (folderStos.length > 1 ? '<button onclick="folderStos.pop();rysujFolder(\'' + esc(id) + '\')">⬆ W górę</button>' : '') + przyciski + '</div>';
+    (folderStos.length > 1 ? '<button onclick="folderStos.pop();rysujFolder(\'' + esc(id) + '\')">⬆ W górę</button>' : '') +
+    '<button class="glowny" onclick="pobierzZip()">📦 Pobierz ZIP</button>' + przyciski + '</div>';
   html += '<ul class="pliki">' + (wpisy.map((w, i) => '<li onclick="kliknijWpis(\'' + esc(id) + '\',' + i + ')">' +
     (w.kind === 'directory' ? '📁' : ikonaPliku(w.name)) + ' <span>' + esc(w.name) + '</span></li>').join('') || '<li>(folder jest pusty)</li>') + '</ul>' +
     '<div class="male" style="margin-top:6px">Kliknij plik, żeby go podejrzeć (.ino, .h, .txt, zdjęcia) albo pobrać.</div>';
@@ -680,6 +681,61 @@ async function kliknijWpis(id, i) {
   if (tekstowe.includes(r) || f.type.startsWith('image/') || r === 'pdf') window.open(url, '_blank');
   else { const a = document.createElement('a'); a.href = url; a.download = w.name; a.click(); }
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+// ---- ZIP (bez bibliotek z internetu) ----
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function deflate(b) {
+  if (!window.CompressionStream) return null;
+  const st = new Blob([b]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+async function zbierzPliki(dir, prefix, lista) {
+  for await (const w of dir.values()) {
+    if (w.kind === 'directory') await zbierzPliki(w, prefix + w.name + '/', lista);
+    else { const f = await w.getFile(); lista.push({ nazwa: prefix + w.name, dane: new Uint8Array(await f.arrayBuffer()), data: new Date(f.lastModified) }); }
+  }
+}
+async function zrobZip(pliki) {
+  const enc = new TextEncoder(), czesci = [], centralne = [];
+  let offset = 0;
+  for (const p of pliki) {
+    const nazwa = enc.encode(p.nazwa), crc = crc32(p.dane);
+    let comp = await deflate(p.dane), metoda = 8;
+    if (!comp || comp.length >= p.dane.length) { comp = p.dane; metoda = 0; }
+    const d = p.data.getFullYear() < 1980 ? new Date(1980, 0, 1) : p.data;
+    const czas = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dat = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, metoda, true);
+    lh.setUint16(10, czas, true); lh.setUint16(12, dat, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, comp.length, true); lh.setUint32(22, p.dane.length, true); lh.setUint16(26, nazwa.length, true);
+    czesci.push(lh.buffer, nazwa, comp);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, metoda, true); ch.setUint16(12, czas, true); ch.setUint16(14, dat, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, comp.length, true); ch.setUint32(24, p.dane.length, true); ch.setUint16(28, nazwa.length, true);
+    ch.setUint32(42, offset, true);
+    centralne.push(ch.buffer, nazwa);
+    offset += 30 + nazwa.length + comp.length;
+  }
+  let cd = 0; centralne.forEach(x => cd += x.byteLength);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, pliki.length, true); end.setUint16(10, pliki.length, true);
+  end.setUint32(12, cd, true); end.setUint32(16, offset, true);
+  return new Blob([...czesci, ...centralne, end.buffer], { type: 'application/zip' });
+}
+async function pobierzZip() {
+  const dir = folderStos[folderStos.length - 1]; if (!dir) return;
+  try {
+    komunikat('Pakuję folder „' + dir.name + '”…');
+    const pliki = []; await zbierzPliki(dir, dir.name + '/', pliki);
+    if (!pliki.length) return alert('Folder jest pusty.');
+    const zip = await zrobZip(pliki);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(zip); a.download = dir.name + '.zip'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    komunikat('Gotowe: ' + dir.name + '.zip (' + pliki.length + ' plików, ' + Math.round(zip.size / 1024) + ' KB)');
+  } catch (e) { alert('Nie udało się zrobić ZIP: ' + e.message); }
 }
 async function kopiujSciezke(id) {
   try { await navigator.clipboard.writeText(sciezka(id)); komunikat('Skopiowano ścieżkę – Win+E, Strg+V w pasku adresu'); } catch (e) { }
