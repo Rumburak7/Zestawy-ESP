@@ -77,8 +77,14 @@ textarea.kod{font-family:Consolas,monospace;font-size:13px;min-height:110px}
 #powiekszenie.widoczny{display:flex}
 #powiekszenie img{max-width:100%;max-height:88vh;background:#fff;border-radius:6px}
 #powiekszenie div{color:#fff;margin-top:10px;font-size:15px}
+.pliki{list-style:none;margin:0;padding:0;border:1px solid var(--linia);border-radius:8px;max-height:360px;overflow:auto}
+.pliki li{padding:7px 12px;border-bottom:1px solid var(--linia);cursor:pointer;display:flex;gap:10px;align-items:center}
+.pliki li:last-child{border-bottom:0}
+.pliki li:hover{background:#eef4ff}
+.pliki li .rozm{margin-left:auto;color:var(--szary);font-size:12px}
+.sciezka{font-family:Consolas,monospace;font-size:13px;background:#f3f5f8;padding:6px 10px;border-radius:6px;word-break:break-all}
 footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
-@media (max-width:700px){.dwie,.zdjecia3{grid-template-columns:1fr}.gora .qrbox{display:none}header .przyciski .tylko-laptop{display:none}}
+@media (max-width:700px){.tylko-laptop-panel{display:none}.dwie,.zdjecia3{grid-template-columns:1fr}.gora .qrbox{display:none}header .przyciski .tylko-laptop{display:none}}
 @media print{
   @page{margin:8mm}
   body{background:#fff}
@@ -357,6 +363,15 @@ function bazaDanych() {
     r.onsuccess = () => ok(r.result); r.onerror = () => blad(r.error);
   });
 }
+async function idbUstaw(klucz, wartosc) {
+  try { const db = await bazaDanych(); const t = db.transaction('pliki', 'readwrite').objectStore('pliki'); wartosc == null ? t.delete(klucz) : t.put(wartosc, klucz); } catch (e) { }
+}
+async function idbPobierz(klucz) {
+  try {
+    const db = await bazaDanych();
+    return await new Promise(ok => { const r = db.transaction('pliki').objectStore('pliki').get(klucz); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); });
+  } catch (e) { return null; }
+}
 async function zapamietajPlik(h) {
   try { const db = await bazaDanych(); db.transaction('pliki', 'readwrite').objectStore('pliki').put(h, 'zestawy'); } catch (e) { }
   pokazPrzyciskOtworz(h);
@@ -573,6 +588,7 @@ function widokZestawu(id) {
   if (z.ide) html += '<div class="panel"><h2>⚙️ Ustawienia Arduino IDE</h2><p class="tekst">' + esc(z.ide) + '</p></div>';
   if (z.konfiguracja) html += '<div class="panel"><h2>🧩 Konfiguracja (działające ustawienia)</h2><pre>' + esc(z.konfiguracja) + '</pre></div>';
   if (z.uwagi) html += '<div class="panel"><h2>📝 Uwagi</h2><p class="tekst">' + esc(z.uwagi) + '</p></div>';
+  html += '<div class="panel tylko-laptop-panel"><h2>💻 Mój folder z plikami</h2><div id="folderBox"><span class="male">…</span></div></div>';
   const zd = (z.zdjecia || []).filter(f => f && f.src);
   if (zd.length) {
     html += '<div class="panel"><h2>📷 Zdjęcia i schematy</h2><div class="zdjecia3">' +
@@ -580,6 +596,8 @@ function widokZestawu(id) {
         (f.opis ? '<figcaption>' + esc(f.opis) + '</figcaption>' : '') + '</figure>').join('') + '</div></div>';
   }
   t.innerHTML = html;
+  folderStos = [];
+  rysujFolder(z.id);
 }
 
 function powieksz(id, i) {
@@ -588,6 +606,84 @@ function powieksz(id, i) {
   $('powiekszenie').classList.add('widoczny');
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') $('powiekszenie').classList.remove('widoczny'); });
+
+// ================== Folder zestawu (tylko na tym komputerze) ==================
+let folderStos = [];   // [uchwyt folderu głównego, podfolder, ...]
+function sciezka(id) { try { return localStorage.getItem('sciezka:' + id) || ''; } catch (e) { return ''; } }
+function ustawSciezke(id, t) { try { t ? localStorage.setItem('sciezka:' + id, t) : localStorage.removeItem('sciezka:' + id); } catch (e) { } }
+
+async function wybierzFolder(id) {
+  try {
+    const h = await showDirectoryPicker({ id: 'folder-esp', mode: 'read' });
+    await idbUstaw('folder:' + id, h);
+    folderStos = [h];
+    rysujFolder(id, true);
+  } catch (e) { if (e.name !== 'AbortError') alert('Nie udało się wybrać folderu: ' + e.message); }
+}
+async function odepnijFolder(id) {
+  if (!confirm('Odpiąć folder od tego zestawu? (pliki na dysku zostają)')) return;
+  await idbUstaw('folder:' + id, null); folderStos = []; rysujFolder(id);
+}
+async function rysujFolder(id, prosOZgode) {
+  const box = $('folderBox'); if (!box) return;
+  const sc = sciezka(id);
+  let html = '';
+  if (sc) html += '<div class="akcje" style="align-items:center;margin-top:0"><span class="sciezka">' + esc(sc) + '</span>' +
+    '<button onclick="kopiujSciezke(\'' + esc(id) + '\')">📋 Kopiuj ścieżkę</button></div>' +
+    '<div class="male" style="margin-bottom:10px">Otwieranie w Eksploratorze: <b>Win+E</b> → kliknij w pasek adresu u góry → <b>Strg+V</b> → <b>Enter</b>.</div>';
+  if (!window.showDirectoryPicker) { box.innerHTML = html || '<p class="male">Folder można wybrać tylko na laptopie w Chrome.</p>'; return; }
+  const glowny = folderStos[0] || await idbPobierz('folder:' + id);
+  if (!glowny) {
+    box.innerHTML = html + '<button onclick="wybierzFolder(\'' + esc(id) + '\')">📁 Wybierz folder dla tego zestawu</button>' +
+      '<div class="male" style="margin-top:6px">Folder z programami, bibliotekami i zdjęciami do tego TFT. Zapamiętany tylko na tym komputerze – nie idzie na GitHub.</div>';
+    return;
+  }
+  if (!folderStos.length || folderStos[0] !== glowny) folderStos = [glowny];
+  let zgoda = 'prompt';
+  try { zgoda = await glowny.queryPermission({ mode: 'read' }); if (zgoda !== 'granted' && prosOZgode) zgoda = await glowny.requestPermission({ mode: 'read' }); } catch (e) { }
+  const przyciski = '<button onclick="wybierzFolder(\'' + esc(id) + '\')">🔁 Zmień folder</button><button class="czerwony" onclick="odepnijFolder(\'' + esc(id) + '\')">✖ Odepnij</button>';
+  if (zgoda !== 'granted') {
+    box.innerHTML = html + '<div class="akcje" style="margin-top:0"><button class="glowny" onclick="rysujFolder(\'' + esc(id) + '\',true)">📂 Pokaż pliki z folderu „' + esc(glowny.name) + '”</button>' + przyciski + '</div>' +
+      '<div class="male">Chrome zapyta o pozwolenie – wybierz <b>„Bei jedem Besuch zulassen”</b>, wtedy następnym razem pliki pokażą się same.</div>';
+    return;
+  }
+  const akt = folderStos[folderStos.length - 1];
+  const wpisy = [];
+  try { for await (const w of akt.values()) wpisy.push(w); } catch (e) { box.innerHTML = html + '<p>Nie mogę odczytać folderu (może został przeniesiony).</p><div class="akcje">' + przyciski + '</div>'; return; }
+  wpisy.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, 'pl') : a.kind === 'directory' ? -1 : 1));
+  window._wpisy = wpisy;
+  const droga = folderStos.map(f => esc(f.name)).join(' / ');
+  html += '<div class="akcje" style="margin-top:0;align-items:center"><b>📁 ' + droga + '</b>' +
+    (folderStos.length > 1 ? '<button onclick="folderStos.pop();rysujFolder(\'' + esc(id) + '\')">⬆ W górę</button>' : '') + przyciski + '</div>';
+  html += '<ul class="pliki">' + (wpisy.map((w, i) => '<li onclick="kliknijWpis(\'' + esc(id) + '\',' + i + ')">' +
+    (w.kind === 'directory' ? '📁' : ikonaPliku(w.name)) + ' <span>' + esc(w.name) + '</span></li>').join('') || '<li>(folder jest pusty)</li>') + '</ul>' +
+    '<div class="male" style="margin-top:6px">Kliknij plik, żeby go podejrzeć (.ino, .h, .txt, zdjęcia) albo pobrać.</div>';
+  box.innerHTML = html;
+}
+function ikonaPliku(n) {
+  const r = n.split('.').pop().toLowerCase();
+  if (['ino', 'h', 'cpp', 'c'].includes(r)) return '🧾';
+  if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'].includes(r)) return '🖼️';
+  if (['zip', 'rar', '7z'].includes(r)) return '📦';
+  if (r === 'pdf') return '📕';
+  return '📄';
+}
+async function kliknijWpis(id, i) {
+  const w = window._wpisy[i];
+  if (w.kind === 'directory') { folderStos.push(w); rysujFolder(id); return; }
+  const f = await w.getFile();
+  const r = w.name.split('.').pop().toLowerCase();
+  const tekstowe = ['ino', 'h', 'cpp', 'c', 'txt', 'md', 'json', 'csv', 'ini', 'cfg', 'properties', 'html', 'css', 'js'];
+  let blob = f;
+  if (tekstowe.includes(r)) blob = new Blob([await f.text()], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  if (tekstowe.includes(r) || f.type.startsWith('image/') || r === 'pdf') window.open(url, '_blank');
+  else { const a = document.createElement('a'); a.href = url; a.download = w.name; a.click(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function kopiujSciezke(id) {
+  try { await navigator.clipboard.writeText(sciezka(id)); komunikat('Skopiowano ścieżkę – Win+E, Strg+V w pasku adresu'); } catch (e) { }
+}
 
 // ================== Edytor ==================
 function nowyZestaw() {
@@ -622,6 +718,8 @@ function rysujEdytor() {
     '<label>Stan</label><select onchange="edyt.stan=this.value">' +
     ['sprawdzony', 'do sprawdzenia', 'do uzupełnienia'].map(s => '<option' + (e.stan === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>' +
     '</div></div>' +
+    '<label>Ścieżka do folderu na tym komputerze (nie idzie na GitHub, np. D:\\Arduino\\ESP32-3248S035)</label>' +
+    '<input type="text" id="poleSciezka" value="' + esc(sciezka(e._oryg || e.id)) + '" placeholder="Wklej ścieżkę z paska adresu Eksploratora">' +
     '<label>Zdjęcie</label><div class="akcje" style="margin:0;align-items:center">' +
     (e.zdjecie ? '<img src="' + e.zdjecie + '" style="height:80px;border-radius:6px">' : '') +
     '<button onclick="$(\'zdjecieWejscie\').click()">📷 Wybierz zdjęcie</button>' +
@@ -717,6 +815,12 @@ function gotowe() {
   e.biblioteki = e.biblioteki.filter(b => b.nazwa);
   e.zdjecia = (e.zdjecia || []).filter(f => f.src).slice(0, 3);
   const oryg = e._oryg; delete e._oryg; delete e._idReczne;
+  const sc = $('poleSciezka') ? $('poleSciezka').value.trim().replace(/^"|"$/g, '') : '';
+  if (oryg && oryg !== e.id) {
+    ustawSciezke(oryg, '');
+    idbPobierz('folder:' + oryg).then(h => { if (h) { idbUstaw('folder:' + e.id, h); idbUstaw('folder:' + oryg, null); } });
+  }
+  ustawSciezke(e.id, sc);
   if (edytNowy) dane.zestawy.push(e);
   else { const i = dane.zestawy.findIndex(z => z.id === oryg); dane.zestawy[i] = e; }
   edyt = null; edytNowy = false;
