@@ -116,6 +116,7 @@ footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
 <input type="file" id="plikWejscie" accept=".json,application/json" style="display:none">
 <input type="file" id="zdjecieWejscie" accept="image/*" style="display:none">
 <input type="file" id="slotWejscie" accept="image/*" style="display:none">
+<input type="file" id="importPlik" accept=".json,.txt,application/json" style="display:none">
 
 <script>
 /*QR-START*/
@@ -519,6 +520,7 @@ function render() {
   if (widok === 'edytuj') return widokEdycji(id);
   if (widok === 'naklejki') return widokNaklejek(id);
   if (widok === 'ustawienia') return widokUstawien();
+  if (widok === 'import') return widokImportu();
   widokListy();
 }
 
@@ -530,7 +532,8 @@ function widokListy() {
       'Kliknij <b>📂 Otwórz</b> i wybierz plik z OneDrive, albo dodaj nowy zestaw.</p></div>';
   }
   html += '<input class="szukaj" id="szukaj" placeholder="🔍 Szukaj (np. ST7796, ESP32-S3, GT911)…" oninput="filtruj()">';
-  html += '<div class="akcje nie-drukuj"><button class="glowny" onclick="nowyZestaw()">➕ Nowy zestaw</button></div>';
+  html += '<div class="akcje nie-drukuj"><button class="glowny" onclick="nowyZestaw()">➕ Nowy zestaw</button>' +
+    '<button onclick="idz(\'import\')">📥 Import zestawu (od Claude)</button></div>';
   html += '<div class="siatka" id="siatka"></div>';
   t.innerHTML = html;
   filtruj();
@@ -565,7 +568,8 @@ function widokZestawu(id) {
     '<button class="glowny" onclick="kopiuj(\'' + esc(z.id) + '\')">📋 Kopiuj dla Claude</button>' +
     (navigator.share ? '<button onclick="udostepnij(\'' + esc(z.id) + '\')">📤 Wyślij</button>' : '') +
     '<button onclick="idz(\'edytuj/' + esc(z.id) + '\')">✏️ Edytuj</button>' +
-    '<button onclick="idz(\'naklejki/' + esc(z.id) + '\')">🏷️ Naklejka</button></div>';
+    '<button onclick="idz(\'naklejki/' + esc(z.id) + '\')">🏷️ Naklejka</button>' +
+    '<button onclick="eksportuj(\'' + esc(z.id) + '\')" title="Kopiuje opis zestawu w formacie do importu - np. żeby Claude go poprawił">📤 Eksport</button></div>';
 
   html += '<div class="panel"><div class="gora">' +
     (z.zdjecie ? '<img class="zdjecie" src="' + z.zdjecie + '" alt="">' : '') +
@@ -922,6 +926,59 @@ function arkusz() {
     for (let i = 0; i < kopie; i++) html += jedna;
   });
   $('arkusz').innerHTML = html || '<p class="male">Zaznacz co najmniej jeden zestaw.</p>';
+}
+
+// ================== Import / eksport zestawu ==================
+function widokImportu() {
+  $('tresc').innerHTML = '<div class="panel"><h2>📥 Import zestawu</h2>' +
+    '<p>Wklej tutaj tekst, który przygotował Claude (zaczyna się od <b>{</b>), albo wczytaj plik .json.</p>' +
+    '<textarea id="importTekst" class="kod" style="min-height:300px" placeholder="{ &quot;id&quot;: &quot;...&quot;, &quot;nazwa&quot;: &quot;...&quot;, ... }"></textarea>' +
+    '<div class="akcje"><button class="glowny" onclick="importuj()">📥 Importuj</button>' +
+    '<button onclick="$(\'importPlik\').click()">📂 Wczytaj z pliku…</button>' +
+    '<button onclick="idz(\'\')">Anuluj</button></div>' +
+    '<p class="male">Jeśli zestaw o tej samej krótkiej nazwie (id) już jest, strona zapyta, czy go zastąpić. Twoje zdjęcia i folder zostają.</p></div>';
+}
+function wyciagnijJSON(t) {
+  t = t.replace(/```[a-z]*/gi, '').trim();
+  const a = t.search(/[\[{]/), b = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']'));
+  if (a < 0 || b < a) throw new Error('nie widzę tekstu zaczynającego się od {');
+  return JSON.parse(t.slice(a, b + 1));
+}
+function importuj(tekst) {
+  let d;
+  try { d = wyciagnijJSON(tekst != null ? tekst : $('importTekst').value); }
+  catch (e) { return alert('Nie mogę odczytać tekstu: ' + e.message + '\nSkopiuj cały tekst od Claude, od { do }.'); }
+  const lista = Array.isArray(d) ? d : d.zestawy ? d.zestawy : d.zestaw ? [d.zestaw] : [d];
+  let ostatni = null, ile = 0;
+  for (let z of lista) {
+    z = Object.assign(pustyZestaw(), z);
+    z.id = slug(z.id || z.nazwa);
+    if (!z.nazwa || !z.id) { alert('Pominięto zestaw bez nazwy.'); continue; }
+    const i = dane.zestawy.findIndex(x => x.id === z.id);
+    if (i >= 0) {
+      if (!confirm('Zestaw „' + dane.zestawy[i].nazwa + '” już jest. Zastąpić go nowym opisem?\n(zdjęcia zostaną)')) continue;
+      const stary = dane.zestawy[i];
+      if (!z.zdjecie) z.zdjecie = stary.zdjecie;
+      if (!z.zdjecia || !z.zdjecia.length) z.zdjecia = stary.zdjecia;
+      dane.zestawy[i] = z;
+    } else dane.zestawy.push(z);
+    ostatni = z; ile++;
+  }
+  if (!ile) return;
+  ustawZmiany(true);
+  komunikat('Zaimportowano: ' + ile + '. Pamiętaj: 💾 Zapisz');
+  idz(ile === 1 ? 'z/' + ostatni.id : '');
+}
+$('importPlik').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  importuj(await f.text()); e.target.value = '';
+});
+async function eksportuj(id) {
+  const z = Object.assign({}, znajdz(id)); delete z.zdjecie; delete z.zdjecia;
+  const t = JSON.stringify(z, null, 1);
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  komunikat('Skopiowano opis zestawu (bez zdjęć) - wklej Claude do poprawienia');
 }
 
 // ================== Ustawienia ==================
