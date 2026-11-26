@@ -65,8 +65,20 @@ textarea.kod{font-family:Consolas,monospace;font-size:13px;min-height:110px}
 .naklejka svg{width:100%;height:auto;display:block}
 .naklejka .n1{font-weight:bold;font-size:calc(var(--w) * 0.085mm);line-height:1.15;margin-top:.5mm;word-break:break-word}
 .naklejka .n2{font-size:calc(var(--w) * 0.065mm);line-height:1.15;color:#333}
+.zdjecia3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.zdjecia3 figure{margin:0;border:1px solid var(--linia);border-radius:10px;overflow:hidden;background:#fafbfc}
+.zdjecia3 img{width:100%;height:220px;object-fit:contain;background:#fff;cursor:zoom-in;display:block}
+.zdjecia3 figcaption{padding:6px 10px;font-size:13px;border-top:1px solid var(--linia)}
+.slot{border:2px dashed var(--linia);border-radius:10px;padding:10px;background:#fafbfc}
+.slot .podglad{height:150px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:6px;margin-bottom:8px;color:var(--szary);font-size:13px;text-align:center}
+.slot .podglad img{max-width:100%;max-height:150px}
+.slot .akcje{margin:6px 0 0}
+#powiekszenie{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;padding:20px}
+#powiekszenie.widoczny{display:flex}
+#powiekszenie img{max-width:100%;max-height:88vh;background:#fff;border-radius:6px}
+#powiekszenie div{color:#fff;margin-top:10px;font-size:15px}
 footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
-@media (max-width:700px){.dwie{grid-template-columns:1fr}.gora .qrbox{display:none}header .przyciski .tylko-laptop{display:none}}
+@media (max-width:700px){.dwie,.zdjecia3{grid-template-columns:1fr}.gora .qrbox{display:none}header .przyciski .tylko-laptop{display:none}}
 @media print{
   @page{margin:8mm}
   body{background:#fff}
@@ -92,8 +104,10 @@ footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
 <main id="tresc"></main>
 <footer>Zestawy ESP – autor Adam Bryks 2026</footer>
 <div id="komunikat"></div>
+<div id="powiekszenie" onclick="this.classList.remove('widoczny')"><img id="powImg" alt=""><div id="powOpis"></div></div>
 <input type="file" id="plikWejscie" accept=".json,application/json" style="display:none">
 <input type="file" id="zdjecieWejscie" accept="image/*" style="display:none">
+<input type="file" id="slotWejscie" accept="image/*" style="display:none">
 
 <script>
 /*QR-START*/
@@ -310,7 +324,7 @@ function uzupelnij(d) {
   return d;
 }
 function pustyZestaw() {
-  return { id: '', nazwa: '', stan: 'do sprawdzenia', plytka: '', ekran: '', sterownik: '', dotyk: '', sd: '', ide: '', piny: [], biblioteki: [], konfiguracja: '', uwagi: '', zdjecie: '' };
+  return { id: '', nazwa: '', stan: 'do sprawdzenia', plytka: '', ekran: '', sterownik: '', dotyk: '', sd: '', ide: '', piny: [], biblioteki: [], konfiguracja: '', uwagi: '', zdjecie: '', zdjecia: [] };
 }
 function znajdz(id) { return dane.zestawy.find(z => z.id === id); }
 function adresZestawu(z) {
@@ -506,8 +520,21 @@ function widokZestawu(id) {
   if (z.ide) html += '<div class="panel"><h2>⚙️ Ustawienia Arduino IDE</h2><p class="tekst">' + esc(z.ide) + '</p></div>';
   if (z.konfiguracja) html += '<div class="panel"><h2>🧩 Konfiguracja (działające ustawienia)</h2><pre>' + esc(z.konfiguracja) + '</pre></div>';
   if (z.uwagi) html += '<div class="panel"><h2>📝 Uwagi</h2><p class="tekst">' + esc(z.uwagi) + '</p></div>';
+  const zd = (z.zdjecia || []).filter(f => f && f.src);
+  if (zd.length) {
+    html += '<div class="panel"><h2>📷 Zdjęcia i schematy</h2><div class="zdjecia3">' +
+      zd.map((f, i) => '<figure><img src="' + f.src + '" alt="" onclick="powieksz(\'' + esc(z.id) + '\',' + (z.zdjecia.indexOf(f)) + ')">' +
+        (f.opis ? '<figcaption>' + esc(f.opis) + '</figcaption>' : '') + '</figure>').join('') + '</div></div>';
+  }
   t.innerHTML = html;
 }
+
+function powieksz(id, i) {
+  const f = znajdz(id).zdjecia[i];
+  $('powImg').src = f.src; $('powOpis').textContent = f.opis || '';
+  $('powiekszenie').classList.add('widoczny');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('powiekszenie').classList.remove('widoczny'); });
 
 // ================== Edytor ==================
 function nowyZestaw() {
@@ -567,6 +594,15 @@ function rysujEdytor() {
     '<h2 style="margin-top:14px">🧩 Konfiguracja</h2><div class="male">Np. klasa LGFX z działającego szablonu, calData, setRotation…</div>' +
     '<textarea class="kod" oninput="edyt.konfiguracja=this.value">' + esc(e.konfiguracja) + '</textarea>' +
     '<h2 style="margin-top:14px">📝 Uwagi</h2><textarea oninput="edyt.uwagi=this.value">' + esc(e.uwagi) + '</textarea></div>';
+  while (e.zdjecia.length < 3) e.zdjecia.push({ src: '', opis: '' });
+  html += '<div class="panel"><h2>📷 Zdjęcia i schematy (3 miejsca na dole karty)</h2>' +
+    '<div class="male" style="margin-bottom:8px">Np. schemat z Plan Lutowania, zdjęcie płytki od spodu, zdjęcie w obudowie. Zrzut ekranu możesz wkleić przyciskiem 📋 Wklej (najpierw Win+Shift+S).</div><div class="zdjecia3">' +
+    e.zdjecia.slice(0, 3).map((f, i) => '<div class="slot"><div class="podglad">' +
+      (f.src ? '<img src="' + f.src + '">' : 'Miejsce ' + (i + 1) + '<br>brak zdjęcia') + '</div>' +
+      '<input type="text" placeholder="Podpis, np. Schemat połączeń" value="' + esc(f.opis) + '" oninput="edyt.zdjecia[' + i + '].opis=this.value">' +
+      '<div class="akcje"><button onclick="wybierzSlot(' + i + ')">📷 Wybierz</button><button onclick="wklejSlot(' + i + ')">📋 Wklej</button>' +
+      (f.src ? '<button class="czerwony" onclick="edyt.zdjecia[' + i + ']={src:\'\',opis:\'\'};rysujEdytor()">✖</button>' : '') +
+      '</div></div>').join('') + '</div></div>';
   html += '<div class="akcje"><button class="glowny" onclick="gotowe()">✔ Gotowe</button><button onclick="anuluj()">Anuluj</button></div>';
   $('tresc').innerHTML = html;
 }
@@ -584,16 +620,33 @@ $('zdjecieWejscie').addEventListener('change', async ev => {
   try { edyt.zdjecie = await zmniejszZdjecie(f); rysujEdytor(); } catch (e) { alert('Nie udało się wczytać zdjęcia'); }
   ev.target.value = '';
 });
-function zmniejszZdjecie(file) {
+let slotNr = 0;
+function wybierzSlot(i) { slotNr = i; $('slotWejscie').click(); }
+$('slotWejscie').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try { edyt.zdjecia[slotNr].src = await zmniejszZdjecie(f, 1600); rysujEdytor(); } catch (e) { alert('Nie udało się wczytać zdjęcia'); }
+  ev.target.value = '';
+});
+async function wklejSlot(i) {
+  try {
+    const elementy = await navigator.clipboard.read();
+    for (const el of elementy) {
+      const typ = el.types.find(t => t.startsWith('image/'));
+      if (typ) { edyt.zdjecia[i].src = await zmniejszZdjecie(await el.getType(typ), 1600); rysujEdytor(); return; }
+    }
+    alert('W schowku nie ma obrazka. Zrób zrzut (Win+Shift+S) i spróbuj jeszcze raz.');
+  } catch (e) { alert('Przeglądarka nie pozwoliła wkleić. Użyj przycisku 📷 Wybierz.'); }
+}
+function zmniejszZdjecie(file, maxRoz) {
   return new Promise((ok, blad) => {
     const img = new Image();
     img.onload = () => {
-      const max = 800, s = Math.min(1, max / Math.max(img.width, img.height));
+      const max = maxRoz || 800, s = Math.min(1, max / Math.max(img.width, img.height));
       const c = document.createElement('canvas');
       c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(img.src);
-      ok(c.toDataURL('image/jpeg', 0.8));
+      ok(c.toDataURL('image/jpeg', maxRoz ? 0.88 : 0.8));
     };
     img.onerror = blad;
     img.src = URL.createObjectURL(file);
@@ -609,6 +662,7 @@ function gotowe() {
   if (inny) return alert('Krótka nazwa „' + e.id + '” jest już zajęta przez: ' + inny.nazwa);
   e.piny = e.piny.filter(p => p.grupa || p.sygnal || p.gpio || p.uwaga);
   e.biblioteki = e.biblioteki.filter(b => b.nazwa);
+  e.zdjecia = (e.zdjecia || []).filter(f => f.src).slice(0, 3);
   const oryg = e._oryg; delete e._oryg; delete e._idReczne;
   if (edytNowy) dane.zestawy.push(e);
   else { const i = dane.zestawy.findIndex(z => z.id === oryg); dane.zestawy[i] = e; }
