@@ -93,7 +93,8 @@ footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
   <h1 onclick="idz('')">🔌 Zestawy ESP</h1>
   <span class="zrodlo" id="zrodlo"></span>
   <div class="przyciski">
-    <button class="tylko-laptop" onclick="otworzPlik()" title="Otwórz plik zestawy.json z OneDrive">📂 Otwórz</button>
+    <button class="tylko-laptop" id="przyciskOtworz" onclick="otworzPlik(false)" title="Otwórz zapamiętany plik zestawy.json z OneDrive">📂 Otwórz</button>
+    <button class="tylko-laptop" onclick="otworzPlik(true)" title="Wybierz inny plik">📁 Inny plik…</button>
     <button class="tylko-laptop" onclick="zapisz()" title="Zapisz plik zestawy.json (OneDrive)">💾 Zapisz</button>
     <button class="tylko-laptop" onclick="pobierz()" title="Pobierz plik do wgrania na GitHub">⬇️ Pobierz plik</button>
     <button class="tylko-laptop" onclick="idz('naklejki')">🏷️ Naklejki</button>
@@ -347,19 +348,56 @@ async function wczytajZGithuba() {
   } catch (e) { zrodlo = ''; }
 }
 
-async function otworzPlik() {
-  if (zmiany && !confirm('Masz niezapisane zmiany. Otworzyć inny plik i je stracić?')) return;
-  if (window.showOpenFilePicker) {
-    try {
-      const [h] = await showOpenFilePicker({ id: 'zestawyesp', types: [{ description: 'Zestawy ESP (JSON)', accept: { 'application/json': ['.json'] } }] });
-      const f = await h.getFile();
-      dane = uzupelnij(JSON.parse(await f.text()));
-      uchwytPliku = h; zrodlo = 'plik ' + f.name + ' (z komputera)';
-      ustawZmiany(false); pokazZrodlo(); render(); komunikat('Wczytano ' + f.name);
-    } catch (e) { if (e.name !== 'AbortError') alert('Nie udało się otworzyć pliku: ' + e.message); }
-    return;
+// --- zapamiętany plik (IndexedDB) ---
+function bazaDanych() {
+  return new Promise((ok, blad) => {
+    const r = indexedDB.open('zestawy-esp', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('pliki');
+    r.onsuccess = () => ok(r.result); r.onerror = () => blad(r.error);
+  });
+}
+async function zapamietajPlik(h) {
+  try { const db = await bazaDanych(); db.transaction('pliki', 'readwrite').objectStore('pliki').put(h, 'zestawy'); } catch (e) { }
+  pokazPrzyciskOtworz(h);
+}
+async function zapamietanyPlik() {
+  try {
+    const db = await bazaDanych();
+    return await new Promise(ok => { const r = db.transaction('pliki').objectStore('pliki').get('zestawy'); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); });
+  } catch (e) { return null; }
+}
+function pokazPrzyciskOtworz(h) {
+  const b = $('przyciskOtworz');
+  if (h) { b.textContent = '📂 Otwórz ' + h.name; b.title = 'Wczytaj zapamiętany plik ' + h.name + ' z OneDrive'; }
+}
+async function wczytajUchwyt(h) {
+  const f = await h.getFile();
+  dane = uzupelnij(JSON.parse(await f.text()));
+  uchwytPliku = h; zrodlo = 'plik ' + f.name + ' (z komputera)';
+  ustawZmiany(false); pokazZrodlo(); render(); komunikat('Wczytano ' + f.name);
+}
+
+async function otworzPlik(inny) {
+  if (zmiany && !confirm('Masz niezapisane zmiany. Otworzyć plik i je stracić?')) return;
+  if (!window.showOpenFilePicker) { $('plikWejscie').click(); return; }
+  if (!inny) {
+    const h = await zapamietanyPlik();
+    if (h) {
+      try {
+        if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted' &&
+            (await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+        await wczytajUchwyt(h);
+        return;
+      } catch (e) {
+        alert('Nie mogę otworzyć zapamiętanego pliku (może został przeniesiony). Wybierz go jeszcze raz.');
+      }
+    }
   }
-  $('plikWejscie').click();
+  try {
+    const [h] = await showOpenFilePicker({ id: 'zestawyesp', types: [{ description: 'Zestawy ESP (JSON)', accept: { 'application/json': ['.json'] } }] });
+    await wczytajUchwyt(h);
+    zapamietajPlik(h);
+  } catch (e) { if (e.name !== 'AbortError') alert('Nie udało się otworzyć pliku: ' + e.message); }
 }
 $('plikWejscie').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
@@ -375,6 +413,7 @@ async function zapisz() {
     try {
       if (!uchwytPliku) {
         uchwytPliku = await showSaveFilePicker({ id: 'zestawyesp', suggestedName: 'zestawy.json', types: [{ description: 'Zestawy ESP (JSON)', accept: { 'application/json': ['.json'] } }] });
+        zapamietajPlik(uchwytPliku);
       }
       if (uchwytPliku.queryPermission && (await uchwytPliku.queryPermission({ mode: 'readwrite' })) !== 'granted') {
         if ((await uchwytPliku.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('brak zgody na zapis');
@@ -732,6 +771,7 @@ function widokUstawien() {
   const z = new URLSearchParams(location.search).get('z');
   if (z) history.replaceState(null, '', location.pathname + '#z/' + encodeURIComponent(z));
   await wczytajZGithuba();
+  if (window.showOpenFilePicker) zapamietanyPlik().then(pokazPrzyciskOtworz);
   window.addEventListener('hashchange', render);
   render();
 })();
