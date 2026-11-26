@@ -101,6 +101,7 @@ footer{text-align:center;color:var(--szary);font-size:12px;padding:20px}
     <button onclick="idz('ustawienia')">⚙️</button>
   </div>
 </header>
+<div id="pasekPlik" style="display:none;background:#e3efff;border-bottom:1px solid #b6d1f5;padding:8px 18px;font-size:14px;cursor:pointer" onclick="otworzPlik(false)">📂 Kliknij tutaj, żeby wczytać swój plik <b id="pasekNazwa">zestawy.json</b> (Chrome zapyta o pozwolenie – wybierz <b>„Bei jedem Besuch zulassen”</b>, wtedy następnym razem wczyta się samo).</div>
 <div id="pasek">⚠️ Masz niezapisane zmiany. Kliknij <b>💾 Zapisz</b>, a potem wgraj plik <b>zestawy.json</b> na GitHub.</div>
 <main id="tresc"></main>
 <footer>Zestawy ESP – autor Adam Bryks 2026</footer>
@@ -375,6 +376,19 @@ async function wczytajUchwyt(h) {
   dane = uzupelnij(JSON.parse(await f.text()));
   uchwytPliku = h; zrodlo = 'plik ' + f.name + ' (z komputera)';
   ustawZmiany(false); pokazZrodlo(); render(); komunikat('Wczytano ' + f.name);
+  $('pasekPlik').style.display = 'none';
+}
+
+// Przy starcie: jeśli Chrome ma już pozwolenie na zapamiętany plik - wczytaj go od razu
+async function autoWczytaj() {
+  const h = await zapamietanyPlik();
+  if (!h) return;
+  pokazPrzyciskOtworz(h);
+  try {
+    if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') { await wczytajUchwyt(h); return; }
+  } catch (e) { return; }
+  $('pasekNazwa').textContent = h.name;
+  $('pasekPlik').style.display = 'block';
 }
 
 async function otworzPlik(inny) {
@@ -771,7 +785,7 @@ function widokUstawien() {
   const z = new URLSearchParams(location.search).get('z');
   if (z) history.replaceState(null, '', location.pathname + '#z/' + encodeURIComponent(z));
   await wczytajZGithuba();
-  if (window.showOpenFilePicker) zapamietanyPlik().then(pokazPrzyciskOtworz);
+  if (window.showOpenFilePicker) await autoWczytaj();
   window.addEventListener('hashchange', render);
   render();
 })();
